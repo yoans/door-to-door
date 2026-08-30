@@ -349,6 +349,9 @@ body {
   font-weight: 600;
   letter-spacing: 0.01em;
   color: var(--cream);
+  text-align: center;
+  line-height: 1.15;
+  max-width: 100%;
 }
 
 .status-btn.selected.unvisited,

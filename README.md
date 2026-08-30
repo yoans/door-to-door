@@ -7,7 +7,7 @@ Phone-friendly map for door-to-door popcorn in **Timberview & Blooming Heights**
 ## On the route
 
 - **Open** — not visited yet
-- **Answered** — someone came to the door; maybe later
+- **Come back later** — talked, try again later
 - **Bought** — sale
 - **No** — not interested
 - **Not home** — come back
