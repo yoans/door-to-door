@@ -51,38 +51,6 @@ function houseRecord(id) {
   return state.houses[id] || { status: "unvisited", note: "" };
 }
 
-const reusedNumbers = new Set();
-
-function indexHouseNumbers(features) {
-  const counts = new Map();
-  for (const feature of features) {
-    const number = feature.properties.number;
-    if (!number) continue;
-    counts.set(String(number), (counts.get(String(number)) || 0) + 1);
-  }
-  reusedNumbers.clear();
-  for (const [number, count] of counts) {
-    if (count > 1) reusedNumbers.add(number);
-  }
-}
-
-function shortStreet(street) {
-  return String(street || "")
-    .replace(/\b(Drive|Dr|Street|St|Circle|Cir|Court|Ct|Avenue|Ave|Highway|Hwy)\b/gi, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function mapLabel(props) {
-  const number = props.number;
-  if (!number) return "";
-  if (reusedNumbers.has(String(number))) {
-    const street = shortStreet(props.street);
-    return street ? `${number} ${street}` : String(number);
-  }
-  return String(number);
-}
-
 function houseLabel(id) {
   const props = parcelById.get(id)?.properties || {};
   if (props.number && props.address) return props.address;
@@ -235,7 +203,7 @@ function setupMap(data) {
     onEachFeature: (feature, lyr) => {
       const id = feature.properties.id;
       layersById.set(id, lyr);
-      const label = mapLabel(feature.properties);
+      const label = feature.properties.number;
       if (label) {
         const marker = L.marker(lyr.getBounds().getCenter(), {
           pane: "houseLabels",
@@ -446,7 +414,6 @@ async function start() {
   const data = await response.json();
   parcels = data.features;
   for (const feature of parcels) parcelById.set(feature.properties.id, feature);
-  indexHouseNumbers(parcels);
   setupMap(data);
   renderStats();
 }
