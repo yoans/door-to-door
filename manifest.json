@@ -1,0 +1,9 @@
+{
+  "name": "Wagon Popcorn",
+  "short_name": "Wagon",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1a1410",
+  "theme_color": "#1a1410",
+  "description": "Track door-to-door popcorn stops in Timberview and Blooming Heights."
+}
