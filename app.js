@@ -51,9 +51,43 @@ function houseRecord(id) {
   return state.houses[id] || { status: "unvisited", note: "" };
 }
 
+const reusedNumbers = new Set();
+
+function indexHouseNumbers(features) {
+  const counts = new Map();
+  for (const feature of features) {
+    const number = feature.properties.number;
+    if (!number) continue;
+    counts.set(String(number), (counts.get(String(number)) || 0) + 1);
+  }
+  reusedNumbers.clear();
+  for (const [number, count] of counts) {
+    if (count > 1) reusedNumbers.add(number);
+  }
+}
+
+function shortStreet(street) {
+  return String(street || "")
+    .replace(/\b(Drive|Dr|Street|St|Circle|Cir|Court|Ct|Avenue|Ave|Highway|Hwy)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function mapLabel(props) {
+  const number = props.number;
+  if (!number) return "";
+  if (reusedNumbers.has(String(number))) {
+    const street = shortStreet(props.street);
+    return street ? `${number} ${street}` : String(number);
+  }
+  return String(number);
+}
+
 function houseLabel(id) {
   const props = parcelById.get(id)?.properties || {};
-  return props.address || props.street || `House ${id.slice(-5)}`;
+  if (props.number && props.address) return props.address;
+  if (props.street) return `Open lot · ${props.street}`;
+  return props.address || "Open lot";
 }
 
 function setHouse(id, patch) {
@@ -201,20 +235,20 @@ function setupMap(data) {
     onEachFeature: (feature, lyr) => {
       const id = feature.properties.id;
       layersById.set(id, lyr);
-      const number = feature.properties.number;
-      if (number) {
+      const label = mapLabel(feature.properties);
+      if (label) {
         const marker = L.marker(lyr.getBounds().getCenter(), {
           pane: "houseLabels",
           interactive: false,
           keyboard: false,
           icon: L.divIcon({
             className: "house-num is-hidden",
-            html: `<span>${escapeHtml(String(number))}</span>`,
+            html: `<span>${escapeHtml(label)}</span>`,
             iconSize: [0, 0],
             iconAnchor: [0, 0],
           }),
         }).addTo(map);
-        houseLabels.push({ id, marker, layer: lyr, number: String(number) });
+        houseLabels.push({ id, marker, layer: lyr, number: label });
       }
       lyr.on("click", () => openSheet(id));
     },
@@ -412,6 +446,7 @@ async function start() {
   const data = await response.json();
   parcels = data.features;
   for (const feature of parcels) parcelById.set(feature.properties.id, feature);
+  indexHouseNumbers(parcels);
   setupMap(data);
   renderStats();
 }
