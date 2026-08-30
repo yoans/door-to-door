@@ -107,11 +107,11 @@ function renderStats() {
   const done = counts.bought + counts.no;
   document.getElementById("stats").innerHTML = `
     <div class="stat"><b>${done}</b> / ${total} done</div>
-    <div class="stat"><b>${counts.bought}</b> bought</div>
-    <div class="stat"><b>${counts.no}</b> no</div>
-    <div class="stat"><b>${counts.answered}</b> answered</div>
-    <div class="stat"><b>${counts.not_home}</b> not home</div>
-    <div class="stat"><b>${counts.unvisited}</b> still out</div>
+    <div class="stat bought"><svg class="ico"><use href="#i-bought"/></svg><b>${counts.bought}</b> bought</div>
+    <div class="stat no"><svg class="ico"><use href="#i-no"/></svg><b>${counts.no}</b> no</div>
+    <div class="stat answered"><svg class="ico"><use href="#i-answered"/></svg><b>${counts.answered}</b> answered</div>
+    <div class="stat not_home"><svg class="ico"><use href="#i-home"/></svg><b>${counts.not_home}</b> not home</div>
+    <div class="stat unanswered"><svg class="ico"><use href="#i-open"/></svg><b>${counts.unvisited}</b> still out</div>
   `;
 }
 

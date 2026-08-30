@@ -17,6 +17,21 @@
   box-sizing: border-box;
 }
 
+.sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.ico {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  flex: 0 0 auto;
+  fill: none;
+}
+
 html,
 body,
 #app {
@@ -113,7 +128,14 @@ body {
   border-radius: 12px;
   background: rgba(44, 34, 27, 0.92);
   box-shadow: var(--shadow);
-  font-size: 18px;
+  display: grid;
+  place-items: center;
+  color: var(--cream);
+}
+
+.icon-btn .ico {
+  width: 20px;
+  height: 20px;
 }
 
 .icon-btn.active {
@@ -137,12 +159,26 @@ body {
 
 .stat {
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   background: rgba(44, 34, 27, 0.92);
   border-radius: 999px;
   padding: 6px 10px;
   font-size: 12px;
   box-shadow: var(--shadow);
 }
+
+.stat .ico {
+  width: 13px;
+  height: 13px;
+}
+
+.stat.bought .ico { color: var(--green); }
+.stat.no .ico { color: var(--red); }
+.stat.answered .ico { color: var(--amber); }
+.stat.not_home .ico { color: var(--blue); }
+.stat.unanswered .ico { color: var(--open); }
 
 .stat b {
   font-variant-numeric: tabular-nums;
@@ -161,11 +197,19 @@ body {
 
 .chip {
   flex: 0 0 auto;
-  padding: 7px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
   border-radius: 999px;
   background: rgba(44, 34, 27, 0.88);
   font-size: 13px;
   box-shadow: var(--shadow);
+}
+
+.chip .ico {
+  width: 13px;
+  height: 13px;
 }
 
 .chip.active {
@@ -189,31 +233,22 @@ body {
   color: var(--muted);
 }
 
-.swatch {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  margin-right: 4px;
-  vertical-align: -1px;
-  border: 1px solid rgba(255, 255, 255, 0.45);
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.swatch.unanswered {
-  background: rgba(255, 255, 255, 0.15);
+.legend .ico {
+  width: 12px;
+  height: 12px;
 }
-.swatch.answered {
-  background: var(--amber);
-}
-.swatch.bought {
-  background: var(--green);
-}
-.swatch.no {
-  background: var(--red);
-}
-.swatch.not_home {
-  background: var(--blue);
-}
+
+.legend .unanswered { color: var(--open); }
+.legend .answered { color: var(--amber); }
+.legend .bought { color: var(--green); }
+.legend .no { color: var(--red); }
+.legend .not_home { color: var(--blue); }
 
 .backdrop {
   position: fixed;
@@ -278,28 +313,42 @@ body {
 }
 
 .status-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .status-btn {
-  min-height: 64px;
-  border-radius: 14px;
+  flex: 1 1 calc(20% - 6px);
+  min-width: 56px;
+  min-height: 40px;
+  border-radius: 10px;
   background: var(--panel-2);
-  text-align: left;
-  padding: 10px 12px;
-  border: 2px solid transparent;
+  padding: 6px 4px;
+  border: 1.5px solid transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
 }
+
+.status-btn .ico {
+  width: 16px;
+  height: 16px;
+}
+
+.status-btn.unanswered { color: var(--open); }
+.status-btn.answered { color: var(--amber); }
+.status-btn.bought { color: var(--green); }
+.status-btn.no { color: var(--red); }
+.status-btn.not_home { color: var(--blue); }
 
 .status-btn b {
-  display: block;
-  font-size: 16px;
-}
-
-.status-btn span {
-  color: var(--muted);
-  font-size: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--cream);
 }
 
 .status-btn.selected.unvisited,

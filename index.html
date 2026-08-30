@@ -22,6 +22,44 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <svg xmlns="http://www.w3.org/2000/svg" class="sprite" aria-hidden="true">
+      <symbol id="i-open" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="8.25" fill="none" stroke="currentColor" stroke-width="1.8"/>
+      </symbol>
+      <symbol id="i-answered" viewBox="0 0 24 24">
+        <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M5 6.5h14v9H9.5L5 19z"/>
+      </symbol>
+      <symbol id="i-bought" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="8.25" fill="none" stroke="currentColor" stroke-width="1.8"/>
+        <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M8 12.2l2.6 2.6L16.4 9"/>
+      </symbol>
+      <symbol id="i-no" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="8.25" fill="none" stroke="currentColor" stroke-width="1.8"/>
+        <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M9 9l6 6M15 9l-6 6"/>
+      </symbol>
+      <symbol id="i-home" viewBox="0 0 24 24">
+        <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M4.5 11.5 12 5l7.5 6.5V20H15v-5.2h-6V20H4.5z"/>
+      </symbol>
+      <symbol id="i-locate" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="3.2" fill="currentColor"/>
+        <circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="1.8"/>
+        <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M12 3.2v2.2M12 18.6v2.2M3.2 12h2.2M18.6 12h2.2"/>
+      </symbol>
+      <symbol id="i-menu" viewBox="0 0 24 24">
+        <circle cx="12" cy="6" r="1.6" fill="currentColor"/>
+        <circle cx="12" cy="12" r="1.6" fill="currentColor"/>
+        <circle cx="12" cy="18" r="1.6" fill="currentColor"/>
+      </symbol>
+      <symbol id="i-close" viewBox="0 0 24 24">
+        <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/>
+      </symbol>
+      <symbol id="i-all" viewBox="0 0 24 24">
+        <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M4.5 6.5h15v3h-15zM4.5 11.5h15v3h-15zM4.5 16.5h15v3h-15z"/>
+      </symbol>
+      <symbol id="i-back" viewBox="0 0 24 24">
+        <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M7 7v5h5M7 12a7 7 0 1 0 2-5"/>
+      </symbol>
+    </svg>
     <div id="app">
       <header class="topbar">
         <div class="brand">
@@ -33,10 +71,10 @@
         </div>
         <div class="top-actions">
           <button id="locateBtn" class="icon-btn" type="button" aria-label="My location">
-            ◎
+            <svg class="ico"><use href="#i-locate"/></svg>
           </button>
           <button id="menuBtn" class="icon-btn" type="button" aria-label="More">
-            ⋯
+            <svg class="ico"><use href="#i-menu"/></svg>
           </button>
         </div>
       </header>
@@ -44,21 +82,31 @@
       <div id="stats" class="stats" aria-live="polite"></div>
 
       <div class="filters" id="filters" role="tablist" aria-label="Filter houses">
-        <button class="chip active" data-filter="all" type="button">All</button>
-        <button class="chip" data-filter="unvisited" type="button">Still out</button>
-        <button class="chip" data-filter="callback" type="button">Come back</button>
-        <button class="chip" data-filter="bought" type="button">Bought</button>
-        <button class="chip" data-filter="no" type="button">No</button>
+        <button class="chip active" data-filter="all" type="button">
+          <svg class="ico"><use href="#i-all"/></svg> All
+        </button>
+        <button class="chip" data-filter="unvisited" type="button">
+          <svg class="ico"><use href="#i-open"/></svg> Still out
+        </button>
+        <button class="chip" data-filter="callback" type="button">
+          <svg class="ico"><use href="#i-back"/></svg> Come back
+        </button>
+        <button class="chip" data-filter="bought" type="button">
+          <svg class="ico"><use href="#i-bought"/></svg> Bought
+        </button>
+        <button class="chip" data-filter="no" type="button">
+          <svg class="ico"><use href="#i-no"/></svg> No
+        </button>
       </div>
 
       <div id="map" role="application" aria-label="Neighborhood map"></div>
 
       <div id="legend" class="legend">
-        <span><i class="swatch unanswered"></i> Open</span>
-        <span><i class="swatch answered"></i> Answered</span>
-        <span><i class="swatch bought"></i> Bought</span>
-        <span><i class="swatch no"></i> No</span>
-        <span><i class="swatch not_home"></i> Not home</span>
+        <span class="unanswered"><svg class="ico"><use href="#i-open"/></svg> Open</span>
+        <span class="answered"><svg class="ico"><use href="#i-answered"/></svg> Answered</span>
+        <span class="bought"><svg class="ico"><use href="#i-bought"/></svg> Bought</span>
+        <span class="no"><svg class="ico"><use href="#i-no"/></svg> No</span>
+        <span class="not_home"><svg class="ico"><use href="#i-home"/></svg> Not home</span>
       </div>
     </div>
 
@@ -70,28 +118,30 @@
           <h2 id="sheetTitle">House</h2>
           <p id="sheetSub">Tap a status</p>
         </div>
-        <button id="sheetClose" class="icon-btn" type="button" aria-label="Close">✕</button>
+        <button id="sheetClose" class="icon-btn" type="button" aria-label="Close">
+          <svg class="ico"><use href="#i-close"/></svg>
+        </button>
       </div>
       <div class="status-grid">
         <button class="status-btn unanswered" data-status="unvisited" type="button">
+          <svg class="ico"><use href="#i-open"/></svg>
           <b>Open</b>
-          <span>not visited</span>
         </button>
         <button class="status-btn answered" data-status="answered" type="button">
+          <svg class="ico"><use href="#i-answered"/></svg>
           <b>Answered</b>
-          <span>talked, maybe later</span>
         </button>
         <button class="status-btn bought" data-status="bought" type="button">
+          <svg class="ico"><use href="#i-bought"/></svg>
           <b>Bought</b>
-          <span>sale</span>
         </button>
         <button class="status-btn no" data-status="no" type="button">
+          <svg class="ico"><use href="#i-no"/></svg>
           <b>No</b>
-          <span>not interested</span>
         </button>
         <button class="status-btn not_home" data-status="not_home" type="button">
+          <svg class="ico"><use href="#i-home"/></svg>
           <b>Not home</b>
-          <span>come back</span>
         </button>
       </div>
       <label class="note-label" for="noteInput">Note</label>
@@ -104,7 +154,9 @@
           <h2>Route</h2>
           <p>Saved in this browser. Copy a link to hand off to another phone.</p>
         </div>
-        <button id="menuClose" class="icon-btn" type="button" aria-label="Close menu">✕</button>
+        <button id="menuClose" class="icon-btn" type="button" aria-label="Close menu">
+          <svg class="ico"><use href="#i-close"/></svg>
+        </button>
       </div>
       <div class="menu-actions">
         <button id="shareBtn" type="button">Copy share link</button>
