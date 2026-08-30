@@ -424,12 +424,28 @@ textarea {
   bottom: calc(64px + env(safe-area-inset-bottom));
 }
 
-.leaflet-tooltip.lot-label {
-  background: rgba(26, 20, 16, 0.86);
+.house-num {
+  background: none !important;
+  border: none !important;
+}
+
+.house-num span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(26, 20, 16, 0.72);
   color: #f6efe4;
-  border: 0;
-  border-radius: 8px;
-  box-shadow: none;
   font-weight: 700;
-  font-size: 12px;
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.house-num.is-hidden {
+  display: none;
 }

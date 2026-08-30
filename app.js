@@ -26,6 +26,7 @@ let activeFilter = "all";
 let map;
 let locateMarker;
 let locateWatch = null;
+const houseLabels = [];
 
 function loadState() {
   try {
@@ -98,6 +99,25 @@ function matchesFilter(status) {
   return status === activeFilter;
 }
 
+function lotFitsNumber(layer, number) {
+  const bounds = layer.getBounds();
+  const southWest = map.latLngToContainerPoint(bounds.getSouthWest());
+  const northEast = map.latLngToContainerPoint(bounds.getNorthEast());
+  const width = Math.abs(northEast.x - southWest.x);
+  const height = Math.abs(northEast.y - southWest.y);
+  return width >= 10 + number.length * 7 && height >= 18;
+}
+
+function updateHouseLabels() {
+  if (!map) return;
+  for (const item of houseLabels) {
+    const status = houseRecord(item.id).status;
+    const show = matchesFilter(status) && lotFitsNumber(item.layer, item.number);
+    const el = item.marker.getElement();
+    if (el) el.classList.toggle("is-hidden", !show);
+  }
+}
+
 function renderStats() {
   const counts = { unvisited: 0, answered: 0, bought: 0, no: 0, not_home: 0 };
   for (const feature of parcels) {
@@ -164,19 +184,29 @@ function setupMap(data) {
 
   L.control.zoom({ position: "bottomright" }).addTo(map);
 
+  map.createPane("houseLabels");
+  map.getPane("houseLabels").style.zIndex = 450;
+  map.getPane("houseLabels").style.pointerEvents = "none";
+
   const layer = L.geoJSON(data, {
     style: (feature) => styleFor(feature.properties.id, houseRecord(feature.properties.id).status),
     onEachFeature: (feature, lyr) => {
       const id = feature.properties.id;
       layersById.set(id, lyr);
-      const label = feature.properties.number || feature.properties.address;
-      if (label) {
-        lyr.bindTooltip(String(label), {
-          permanent: false,
-          direction: "center",
-          className: "lot-label",
-          sticky: true,
-        });
+      const number = feature.properties.number;
+      if (number) {
+        const marker = L.marker(lyr.getBounds().getCenter(), {
+          pane: "houseLabels",
+          interactive: false,
+          keyboard: false,
+          icon: L.divIcon({
+            className: "house-num is-hidden",
+            html: `<span>${escapeHtml(String(number))}</span>`,
+            iconSize: [0, 0],
+            iconAnchor: [0, 0],
+          }),
+        }).addTo(map);
+        houseLabels.push({ id, marker, layer: lyr, number: String(number) });
       }
       lyr.on("click", () => openSheet(id));
     },
@@ -184,6 +214,9 @@ function setupMap(data) {
 
   const bounds = layer.getBounds();
   if (bounds.isValid()) map.fitBounds(bounds, { padding: [80, 80] });
+  map.on("zoomend moveend", updateHouseLabels);
+  map.whenReady(updateHouseLabels);
+  requestAnimationFrame(updateHouseLabels);
 }
 
 function setupUi() {
@@ -224,6 +257,7 @@ function setupUi() {
       chip.classList.toggle("active", chip === btn);
     });
     for (const id of layersById.keys()) paintHouse(id);
+    updateHouseLabels();
   });
 
   document.getElementById("locateBtn").addEventListener("click", toggleLocate);
