@@ -159,6 +159,14 @@ function closeSheet() {
   document.getElementById("sheetBackdrop").classList.add("hidden");
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
 function toggleDrawer(id, open) {
   const el = document.getElementById(id);
   el.classList.toggle("hidden", !open);
