@@ -1,37 +1,33 @@
 # Wagon Popcorn
 
-Phone-friendly map for door-to-door popcorn in **Timberview & Blooming Heights**, Norwalk, Iowa. Tap a lot, color it, keep wagon stock. Everything stays in this browser’s local storage.
+Phone-friendly map for door-to-door popcorn in **Timberview & Blooming Heights**, Norwalk, Iowa. Tap a house, color it. Status is saved in this browser.
 
 **Live:** https://yoans.github.io/door-to-door/
-
-## Run it locally
-
-Needs a tiny local server so the lot file can load:
-
-```bash
-python -m http.server 8765
-```
-
-Then open `http://localhost:8765` on the computer, or `http://YOUR-LAN-IP:8765` on a phone on the same Wi‑Fi. Add to the home screen if you want it to feel like an app.
 
 ## On the route
 
 - **Open** — not visited yet
 - **Answered** — someone came to the door; maybe later
-- **Bought** — sale; optional +/− pulls from wagon stock
+- **Bought** — sale
 - **No** — not interested
 - **Not home** — come back
-- Notes stick to the lot
+- Notes stick to the house
 - ◎ follows your GPS
 - Filters: still out, come back, bought, no
-- ⋯ menu can download a JSON backup or reset the map
+- ⋯ **Copy share link** texts the current map to another phone. That phone opens the link and picks up the colors. It is a snapshot, not live two-way sync.
+
+## Run it locally
+
+```bash
+python -m http.server 8765
+```
+
+Then open `http://localhost:8765`.
 
 ## Another neighborhood later
-
-Lot lines are a snapshot of public Warren County parcels (same source Beacon uses). To swap areas:
 
 ```bash
 python scripts/fetch-parcels.py --bbox WEST,SOUTH,EAST,NORTH --name my-neighborhood
 ```
 
-Then update `NEIGHBORHOOD.center` in `app.js` if the new area is far from Norwalk.
+Then update `NEIGHBORHOOD.center` in `app.js`.

@@ -100,9 +100,7 @@ body {
 .icon-btn,
 .chip,
 .status-btn,
-.drawer button,
-.add-item button,
-.stock-row button {
+.drawer button {
   font: inherit;
   color: inherit;
   border: 0;
@@ -326,50 +324,6 @@ body {
   background: #1c3d52;
 }
 
-.sale-box {
-  margin-top: 14px;
-  padding: 12px;
-  border-radius: 14px;
-  background: #1b4a30;
-}
-
-.sale-box p {
-  margin: 0 0 8px;
-  font-size: 13px;
-}
-
-.sale-box small {
-  color: #b7e0c6;
-}
-
-.sale-row,
-.stock-row {
-  display: grid;
-  grid-template-columns: 1fr auto auto auto;
-  gap: 8px;
-  align-items: center;
-  margin-top: 8px;
-}
-
-.sale-row span,
-.stock-row input[type="text"] {
-  min-width: 0;
-}
-
-.qty {
-  min-width: 28px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-}
-
-.step {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: #2c221b;
-}
-
 .note-label {
   display: block;
   margin: 14px 0 6px;
@@ -377,9 +331,7 @@ body {
   color: var(--muted);
 }
 
-textarea,
-input[type="text"],
-input[type="number"] {
+textarea {
   width: 100%;
   font: inherit;
   color: var(--cream);
@@ -390,33 +342,6 @@ input[type="number"] {
   resize: vertical;
 }
 
-.stock-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.stock-row {
-  background: var(--panel-2);
-  padding: 10px;
-  border-radius: 14px;
-  grid-template-columns: 1fr auto auto auto auto;
-}
-
-.stock-row input[type="text"] {
-  border: 0;
-  background: transparent;
-  padding: 4px 0;
-}
-
-.add-item {
-  display: grid;
-  grid-template-columns: 1fr 72px auto;
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.add-item button,
 .menu-actions button {
   background: var(--amber);
   color: #1a1410;
@@ -450,9 +375,12 @@ input[type="number"] {
   bottom: calc(64px + env(safe-area-inset-bottom));
 }
 
-.you-are-here {
-  background: #4da3ff;
-  border: 3px solid white;
-  border-radius: 50%;
-  box-shadow: 0 0 0 8px rgba(77, 163, 255, 0.28);
+.leaflet-tooltip.lot-label {
+  background: rgba(26, 20, 16, 0.86);
+  color: #f6efe4;
+  border: 0;
+  border-radius: 8px;
+  box-shadow: none;
+  font-weight: 700;
+  font-size: 12px;
 }

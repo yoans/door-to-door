@@ -35,9 +35,6 @@
           <button id="locateBtn" class="icon-btn" type="button" aria-label="My location">
             ◎
           </button>
-          <button id="stockBtn" class="icon-btn" type="button" aria-label="Wagon stock">
-            🛒
-          </button>
           <button id="menuBtn" class="icon-btn" type="button" aria-label="More">
             ⋯
           </button>
@@ -97,40 +94,21 @@
           <span>come back</span>
         </button>
       </div>
-      <div id="saleBox" class="sale-box hidden">
-        <p>Take from the wagon</p>
-        <div id="saleItems"></div>
-      </div>
       <label class="note-label" for="noteInput">Note</label>
       <textarea id="noteInput" rows="2" placeholder="Gate code, come back after dinner…"></textarea>
-    </aside>
-
-    <aside id="stockPanel" class="drawer hidden" aria-hidden="true">
-      <div class="drawer-head">
-        <div>
-          <h2>Wagon stock</h2>
-          <p>Tap +/− or tap a number to restock</p>
-        </div>
-        <button id="stockClose" class="icon-btn" type="button" aria-label="Close stock">✕</button>
-      </div>
-      <div id="stockList" class="stock-list"></div>
-      <form id="addItemForm" class="add-item">
-        <input id="newItemName" type="text" placeholder="Add a flavor or item" maxlength="40" />
-        <input id="newItemQty" type="number" inputmode="numeric" min="0" value="0" />
-        <button type="submit">Add</button>
-      </form>
     </aside>
 
     <aside id="menuPanel" class="drawer hidden" aria-hidden="true">
       <div class="drawer-head">
         <div>
           <h2>Route</h2>
-          <p>Saved in this browser only</p>
+          <p>Saved in this browser. Copy a link to hand off to another phone.</p>
         </div>
         <button id="menuClose" class="icon-btn" type="button" aria-label="Close menu">✕</button>
       </div>
       <div class="menu-actions">
-        <button id="exportBtn" type="button">Download progress</button>
+        <button id="shareBtn" type="button">Copy share link</button>
+        <button id="exportBtn" type="button">Download backup</button>
         <button id="resetBtn" class="danger" type="button">Reset all houses</button>
       </div>
     </aside>

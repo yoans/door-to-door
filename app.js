@@ -5,15 +5,9 @@ const NEIGHBORHOOD = {
   zoom: 16,
 };
 
-const STATUSES = ["unvisited", "answered", "bought", "no", "not_home"];
 const STORAGE_KEY = "wagon-popcorn-v1";
-
-const DEFAULT_STOCK = [
-  { id: "caramel", name: "Caramel", qty: 0 },
-  { id: "cheddar", name: "Cheddar", qty: 0 },
-  { id: "kettle", name: "Kettle", qty: 0 },
-  { id: "butter", name: "Butter", qty: 0 },
-];
+const STATUS_CODE = { unvisited: "0", answered: "1", bought: "2", no: "3", not_home: "4" };
+const CODE_STATUS = Object.fromEntries(Object.entries(STATUS_CODE).map(([k, v]) => [v, k]));
 
 const FILL = {
   unvisited: { color: "#f6efe4", weight: 1.2, fillColor: "#ffffff", fillOpacity: 0.08 },
@@ -25,30 +19,27 @@ const FILL = {
 
 const state = loadState();
 const layersById = new Map();
+const parcelById = new Map();
 let parcels = [];
 let activeId = null;
 let activeFilter = "all";
 let map;
 let locateMarker;
 let locateWatch = null;
-let saleDraft = {};
 
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && parsed.houses && parsed.stock) return parsed;
+      if (parsed && parsed.houses) {
+        return { version: 2, neighborhood: NEIGHBORHOOD.id, houses: parsed.houses };
+      }
     }
   } catch {
     /* start fresh */
   }
-  return {
-    version: 1,
-    neighborhood: NEIGHBORHOOD.id,
-    houses: {},
-    stock: DEFAULT_STOCK.map((item) => ({ ...item })),
-  };
+  return { version: 2, neighborhood: NEIGHBORHOOD.id, houses: {} };
 }
 
 function saveState() {
@@ -57,6 +48,11 @@ function saveState() {
 
 function houseRecord(id) {
   return state.houses[id] || { status: "unvisited", note: "" };
+}
+
+function houseLabel(id) {
+  const props = parcelById.get(id)?.properties || {};
+  return props.address || props.street || `House ${id.slice(-5)}`;
 }
 
 function setHouse(id, patch) {
@@ -81,7 +77,7 @@ function paintHouse(id) {
 }
 
 function styleFor(id, status) {
-  const base = { ...FILL[status] || FILL.unvisited };
+  const base = { ...(FILL[status] || FILL.unvisited) };
   const visible = matchesFilter(status);
   if (!visible) {
     base.fillOpacity = 0.04;
@@ -103,16 +99,9 @@ function matchesFilter(status) {
 }
 
 function renderStats() {
-  const counts = {
-    unvisited: 0,
-    answered: 0,
-    bought: 0,
-    no: 0,
-    not_home: 0,
-  };
+  const counts = { unvisited: 0, answered: 0, bought: 0, no: 0, not_home: 0 };
   for (const feature of parcels) {
-    const status = houseRecord(feature.properties.id).status;
-    counts[status] += 1;
+    counts[houseRecord(feature.properties.id).status] += 1;
   }
   const total = parcels.length;
   const done = counts.bought + counts.no;
@@ -130,16 +119,12 @@ function openSheet(id) {
   activeId = id;
   paintHouse(id);
   const rec = houseRecord(id);
-  saleDraft = {};
-  document.getElementById("sheetTitle").textContent = `Lot ${id}`;
-  document.getElementById("sheetSub").textContent = rec.note
-    ? rec.note
-    : "Tap a status for this house";
+  document.getElementById("sheetTitle").textContent = houseLabel(id);
+  document.getElementById("sheetSub").textContent = rec.note || "Tap a status for this house";
   document.getElementById("noteInput").value = rec.note || "";
   document.querySelectorAll(".status-btn").forEach((btn) => {
     btn.classList.toggle("selected", btn.dataset.status === rec.status);
   });
-  renderSaleBox(rec.status);
   document.getElementById("sheet").classList.remove("hidden");
   document.getElementById("sheet").setAttribute("aria-hidden", "false");
   document.getElementById("sheetBackdrop").classList.remove("hidden");
@@ -154,94 +139,11 @@ function closeSheet() {
   document.getElementById("sheetBackdrop").classList.add("hidden");
 }
 
-function renderSaleBox(status) {
-  const box = document.getElementById("saleBox");
-  const list = document.getElementById("saleItems");
-  if (status !== "bought") {
-    box.classList.add("hidden");
-    return;
-  }
-  box.classList.remove("hidden");
-  list.innerHTML = state.stock
-    .map((item) => {
-      const qty = saleDraft[item.id] || 0;
-      return `<div class="sale-row">
-        <span>${escapeHtml(item.name)} <small>(${item.qty} left)</small></span>
-        <button class="step" data-sale-dec="${item.id}" type="button">−</button>
-        <span class="qty">${qty}</span>
-        <button class="step" data-sale-inc="${item.id}" type="button">+</button>
-      </div>`;
-    })
-    .join("");
-}
-
-function takeFromWagon(itemId, delta) {
-  const item = state.stock.find((row) => row.id === itemId);
-  if (!item) return;
-  if (delta > 0) {
-    if (item.qty < 1) return;
-    item.qty -= 1;
-    saleDraft[itemId] = (saleDraft[itemId] || 0) + 1;
-  } else {
-    if ((saleDraft[itemId] || 0) < 1) return;
-    item.qty += 1;
-    saleDraft[itemId] -= 1;
-  }
-  saveState();
-  renderSaleBox("bought");
-  renderStock();
-}
-
-function restoreSaleDraft() {
-  for (const [itemId, qty] of Object.entries(saleDraft)) {
-    const item = state.stock.find((row) => row.id === itemId);
-    if (item) item.qty += qty;
-  }
-  saleDraft = {};
-  saveState();
-  renderStock();
-}
-
-function renderStock() {
-  const list = document.getElementById("stockList");
-  if (!state.stock.length) {
-    list.innerHTML = `<p class="sheet-head"><span>Nothing loaded yet. Add what you brought.</span></p>`;
-    return;
-  }
-  list.innerHTML = state.stock
-    .map(
-      (item) => `<div class="stock-row" data-item="${item.id}">
-        <input type="text" value="${escapeHtml(item.name)}" data-rename="${item.id}" />
-        <button class="step" data-dec="${item.id}" type="button">−</button>
-        <span class="qty">${item.qty}</span>
-        <button class="step" data-inc="${item.id}" type="button">+</button>
-        <button class="step" data-remove="${item.id}" type="button" aria-label="Remove">✕</button>
-      </div>`
-    )
-    .join("");
-}
-
-function changeStock(id, delta) {
-  const item = state.stock.find((row) => row.id === id);
-  if (!item) return;
-  item.qty = Math.max(0, item.qty + delta);
-  saveState();
-  renderStock();
-}
-
 function toggleDrawer(id, open) {
   const el = document.getElementById(id);
   el.classList.toggle("hidden", !open);
   el.setAttribute("aria-hidden", open ? "false" : "true");
   document.getElementById("sheetBackdrop").classList.toggle("hidden", !open && !activeId);
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
 }
 
 function setupMap(data) {
@@ -252,10 +154,7 @@ function setupMap(data) {
 
   L.tileLayer(
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    {
-      maxZoom: 19,
-      attribution: "Tiles © Esri",
-    }
+    { maxZoom: 19, attribution: "Tiles © Esri" }
   ).addTo(map);
 
   L.tileLayer(
@@ -270,6 +169,15 @@ function setupMap(data) {
     onEachFeature: (feature, lyr) => {
       const id = feature.properties.id;
       layersById.set(id, lyr);
+      const label = feature.properties.number || feature.properties.address;
+      if (label) {
+        lyr.bindTooltip(String(label), {
+          permanent: false,
+          direction: "center",
+          className: "lot-label",
+          sticky: true,
+        });
+      }
       lyr.on("click", () => openSheet(id));
     },
   }).addTo(map);
@@ -282,7 +190,6 @@ function setupUi() {
   document.getElementById("sheetClose").addEventListener("click", closeSheet);
   document.getElementById("sheetBackdrop").addEventListener("click", () => {
     closeSheet();
-    toggleDrawer("stockPanel", false);
     toggleDrawer("menuPanel", false);
   });
 
@@ -290,15 +197,10 @@ function setupUi() {
     btn.addEventListener("click", () => {
       if (!activeId) return;
       const status = btn.dataset.status;
-      const prev = houseRecord(activeId).status;
-      if (prev === "bought" && status !== "bought") {
-        restoreSaleDraft();
-      }
       setHouse(activeId, { status, note: document.getElementById("noteInput").value });
       document.querySelectorAll(".status-btn").forEach((el) => {
         el.classList.toggle("selected", el.dataset.status === status);
       });
-      renderSaleBox(status);
     });
   });
 
@@ -308,73 +210,11 @@ function setupUi() {
     document.getElementById("sheetSub").textContent = event.target.value || "Tap a status for this house";
   });
 
-  document.getElementById("saleItems").addEventListener("click", (event) => {
-    const inc = event.target.dataset.saleInc;
-    const dec = event.target.dataset.saleDec;
-    const id = inc || dec;
-    if (!id) return;
-    takeFromWagon(id, inc ? 1 : -1);
-  });
-
-  document.getElementById("stockBtn").addEventListener("click", () => {
-    closeSheet();
-    toggleDrawer("menuPanel", false);
-    renderStock();
-    toggleDrawer("stockPanel", true);
-  });
-  document.getElementById("stockClose").addEventListener("click", () => toggleDrawer("stockPanel", false));
-
   document.getElementById("menuBtn").addEventListener("click", () => {
     closeSheet();
-    toggleDrawer("stockPanel", false);
     toggleDrawer("menuPanel", true);
   });
   document.getElementById("menuClose").addEventListener("click", () => toggleDrawer("menuPanel", false));
-
-  document.getElementById("stockList").addEventListener("click", (event) => {
-    if (event.target.dataset.inc) changeStock(event.target.dataset.inc, 1);
-    if (event.target.dataset.dec) changeStock(event.target.dataset.dec, -1);
-    if (event.target.dataset.remove) {
-      state.stock = state.stock.filter((item) => item.id !== event.target.dataset.remove);
-      saveState();
-      renderStock();
-    }
-    if (event.target.classList.contains("qty")) {
-      const row = event.target.closest("[data-item]");
-      const item = state.stock.find((rowItem) => rowItem.id === row?.dataset.item);
-      if (!item) return;
-      const typed = prompt(`Set ${item.name} quantity`, String(item.qty));
-      if (typed === null) return;
-      const next = Number(typed);
-      if (Number.isFinite(next) && next >= 0) {
-        item.qty = Math.floor(next);
-        saveState();
-        renderStock();
-      }
-    }
-  });
-
-  document.getElementById("stockList").addEventListener("change", (event) => {
-    const id = event.target.dataset.rename;
-    if (!id) return;
-    const item = state.stock.find((row) => row.id === id);
-    if (item) {
-      item.name = event.target.value.trim() || item.name;
-      saveState();
-    }
-  });
-
-  document.getElementById("addItemForm").addEventListener("submit", (event) => {
-    event.preventDefault();
-    const name = document.getElementById("newItemName").value.trim();
-    const qty = Math.max(0, Number(document.getElementById("newItemQty").value) || 0);
-    if (!name) return;
-    state.stock.push({ id: crypto.randomUUID(), name, qty });
-    document.getElementById("newItemName").value = "";
-    document.getElementById("newItemQty").value = "0";
-    saveState();
-    renderStock();
-  });
 
   document.getElementById("filters").addEventListener("click", (event) => {
     const btn = event.target.closest("[data-filter]");
@@ -387,6 +227,7 @@ function setupUi() {
   });
 
   document.getElementById("locateBtn").addEventListener("click", toggleLocate);
+  document.getElementById("shareBtn").addEventListener("click", copyShareLink);
   document.getElementById("exportBtn").addEventListener("click", exportProgress);
   document.getElementById("resetBtn").addEventListener("click", resetHouses);
 }
@@ -432,6 +273,76 @@ function toggleLocate() {
   );
 }
 
+function sharePayload() {
+  const houses = {};
+  for (const [id, rec] of Object.entries(state.houses)) {
+    if (!rec || (rec.status === "unvisited" && !rec.note)) continue;
+    houses[id] = {
+      s: STATUS_CODE[rec.status] || "0",
+      n: rec.note || "",
+      t: rec.updatedAt || 0,
+    };
+  }
+  return { v: 2, houses };
+}
+
+function encodeShare(payload) {
+  const json = JSON.stringify(payload);
+  return btoa(unescape(encodeURIComponent(json))).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/g, "");
+}
+
+function decodeShare(token) {
+  const padded = token.replaceAll("-", "+").replaceAll("_", "/");
+  const json = decodeURIComponent(escape(atob(padded)));
+  return JSON.parse(json);
+}
+
+function mergeSharedHouses(incoming) {
+  if (!incoming || !incoming.houses) return 0;
+  let applied = 0;
+  for (const [id, rec] of Object.entries(incoming.houses)) {
+    const status = CODE_STATUS[rec.s] || rec.status || "unvisited";
+    const note = rec.n || rec.note || "";
+    const updatedAt = rec.t || rec.updatedAt || 0;
+    const current = state.houses[id];
+    if (current && (current.updatedAt || 0) > updatedAt) continue;
+    state.houses[id] = { status, note, updatedAt };
+    applied += 1;
+  }
+  saveState();
+  return applied;
+}
+
+function applyShareFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const token = params.get("s") || hash.get("s");
+  if (!token) return;
+  try {
+    const incoming = decodeShare(token);
+    mergeSharedHouses(incoming);
+  } catch (err) {
+    console.warn("Could not read share link", err);
+  }
+}
+
+async function copyShareLink() {
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.hash = "";
+  url.searchParams.set("s", encodeShare(sharePayload()));
+  const link = url.toString();
+  try {
+    await navigator.clipboard.writeText(link);
+    document.getElementById("shareBtn").textContent = "Link copied";
+    setTimeout(() => {
+      document.getElementById("shareBtn").textContent = "Copy share link";
+    }, 1600);
+  } catch {
+    prompt("Copy this link", link);
+  }
+}
+
 function exportProgress() {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -453,13 +364,14 @@ function resetHouses() {
 }
 
 async function start() {
+  applyShareFromUrl();
   setupUi();
   const response = await fetch("data/parcels.geojson");
   const data = await response.json();
   parcels = data.features;
+  for (const feature of parcels) parcelById.set(feature.properties.id, feature);
   setupMap(data);
   renderStats();
-  renderStock();
 }
 
 start().catch((err) => {
