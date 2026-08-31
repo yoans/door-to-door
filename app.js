@@ -18,6 +18,15 @@ const FILL = {
 };
 
 const CLOUD_KEY = "wagon-popcorn-cloud";
+const DEFAULT_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCznsxBvgEfFjJ510K6xJ0lvCzbwPM4lZo",
+  authDomain: "door-to-door-ee3b7.firebaseapp.com",
+  databaseURL: "https://door-to-door-ee3b7-default-rtdb.firebaseio.com",
+  projectId: "door-to-door-ee3b7",
+  storageBucket: "door-to-door-ee3b7.firebasestorage.app",
+  messagingSenderId: "1088590546630",
+  appId: "1:1088590546630:web:0b1af550cd4ad0df23b9c7",
+};
 const DATABASE_RULES = `{
   "rules": {
     "wagon": {
@@ -501,14 +510,13 @@ function setupUi() {
   });
   document.getElementById("cloudConnectBtn").addEventListener("click", connectFromForm);
   document.getElementById("cloudDisconnectBtn").addEventListener("click", async () => {
-    saveCloudSettings(null);
+    saveCloudSettings({ disabled: true });
     await disconnectCloud();
   });
   const saved = loadCloudSettings();
-  if (saved?.config) {
-    document.getElementById("cloudConfig").value = JSON.stringify(saved.config, null, 2);
-    document.getElementById("cloudRoom").value = saved.room || NEIGHBORHOOD.id;
-  }
+  const config = saved?.config || DEFAULT_FIREBASE_CONFIG;
+  document.getElementById("cloudConfig").value = JSON.stringify(config, null, 2);
+  document.getElementById("cloudRoom").value = saved?.room || NEIGHBORHOOD.id;
 }
 
 function toggleLocate() {
@@ -659,8 +667,9 @@ async function start() {
   setupMap(data);
   renderStats();
   const saved = loadCloudSettings();
-  if (saved?.config) {
-    connectCloud(saved.config, saved.room).catch((err) => {
+  if (!saved?.disabled) {
+    const config = saved?.config || DEFAULT_FIREBASE_CONFIG;
+    connectCloud(config, saved?.room || NEIGHBORHOOD.id).catch((err) => {
       setCloudUi("error", err.message || String(err));
     });
   }
