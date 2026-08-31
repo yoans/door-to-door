@@ -25,7 +25,6 @@ const DATABASE_RULES = `{
         ".read": true,
         "houses": {
           ".write": true,
-          ".validate": "!newData.exists() || newData.numChildren() <= 400",
           "$pin": {
             ".validate": "!newData.exists() || (newData.hasChildren(['status', 'updatedAt']) && newData.child('status').isString() && newData.child('status').val().matches(/^(unvisited|answered|bought|no|not_home)$/) && newData.child('updatedAt').isNumber() && (!newData.hasChild('note') || (newData.child('note').isString() && newData.child('note').val().length <= 240)))"
           }
