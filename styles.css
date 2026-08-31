@@ -278,6 +278,56 @@ body {
   max-height: min(92vh, 760px);
 }
 
+.gate {
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(26, 20, 16, 0.92);
+}
+
+.gate.hidden {
+  display: none;
+}
+
+.gate-card {
+  width: min(420px, 100%);
+  background: var(--panel);
+  border-radius: 20px;
+  padding: 22px 18px 18px;
+  box-shadow: var(--shadow);
+}
+
+.gate-card .pop {
+  font-size: 36px;
+}
+
+.gate-card h2 {
+  margin: 8px 0 8px;
+}
+
+.gate-card p {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.gate-card button {
+  width: 100%;
+  margin-top: 12px;
+  background: var(--amber);
+  color: #1a1410;
+  font: inherit;
+  font-weight: 700;
+  border: 0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+
 .hidden {
   display: none;
 }

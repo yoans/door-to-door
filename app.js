@@ -5,7 +5,8 @@ const NEIGHBORHOOD = {
   zoom: 16,
 };
 
-const STORAGE_KEY = "wagon-popcorn-v1";
+const DATASET_KEY = "wagon-popcorn-dataset";
+const LEGACY_STORAGE_KEY = "wagon-popcorn-v1";
 const STATUS_CODE = { unvisited: "0", answered: "1", bought: "2", no: "3", not_home: "4" };
 const CODE_STATUS = Object.fromEntries(Object.entries(STATUS_CODE).map(([k, v]) => [v, k]));
 
@@ -43,7 +44,7 @@ const DATABASE_RULES = `{
   }
 }`;
 
-const state = loadState();
+let state = emptyState();
 const layersById = new Map();
 const parcelById = new Map();
 let parcels = [];
@@ -56,23 +57,94 @@ const houseLabels = [];
 let cloud = { status: "off", room: NEIGHBORHOOD.id, housesRef: null, applying: false };
 let writeTimes = [];
 
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
+function emptyState() {
+  return { version: 2, neighborhood: NEIGHBORHOOD.id, houses: {} };
+}
+
+function sanitizeDataset(name) {
+  return String(name || "")
+    .trim()
+    .replace(/\s+/g, "")
+    .replace(/[^\w-]/g, "")
+    .slice(0, 40);
+}
+
+function storageKeyFor(dataset) {
+  return `${LEGACY_STORAGE_KEY}:${dataset}`;
+}
+
+function getSavedDataset() {
+  return sanitizeDataset(localStorage.getItem(DATASET_KEY) || "");
+}
+
+function loadState(dataset) {
+  const keys = [storageKeyFor(dataset)];
+  if (dataset === NEIGHBORHOOD.id) keys.push(LEGACY_STORAGE_KEY);
+  for (const key of keys) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
       const parsed = JSON.parse(raw);
       if (parsed && parsed.houses) {
         return { version: 2, neighborhood: NEIGHBORHOOD.id, houses: parsed.houses };
       }
+    } catch {
+      /* try next */
     }
-  } catch {
-    /* start fresh */
   }
-  return { version: 2, neighborhood: NEIGHBORHOOD.id, houses: {} };
+  return emptyState();
 }
 
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  const dataset = getSavedDataset() || cloud.room;
+  if (!dataset) return;
+  localStorage.setItem(
+    storageKeyFor(dataset),
+    JSON.stringify({ version: 2, neighborhood: NEIGHBORHOOD.id, houses: state.houses })
+  );
+}
+
+function refreshHouses() {
+  for (const id of layersById.keys()) paintHouse(id);
+  renderStats();
+  updateHouseLabels();
+}
+
+function setDatasetLabel(dataset) {
+  const el = document.getElementById("datasetLabel");
+  if (el) el.textContent = dataset || "Timberview & Blooming Heights";
+}
+
+function showDatasetGate() {
+  const gate = document.getElementById("datasetGate");
+  gate.classList.remove("hidden");
+  gate.setAttribute("aria-hidden", "false");
+  const input = document.getElementById("datasetInput");
+  input.value = getSavedDataset() || "";
+  input.focus();
+}
+
+function hideDatasetGate() {
+  const gate = document.getElementById("datasetGate");
+  gate.classList.add("hidden");
+  gate.setAttribute("aria-hidden", "true");
+}
+
+async function openDataset(rawName) {
+  const dataset = sanitizeDataset(rawName);
+  if (!dataset) {
+    throw new Error("Use letters and numbers, like SellingSept2026 or cy2026.");
+  }
+  localStorage.setItem(DATASET_KEY, dataset);
+  const loaded = loadState(dataset);
+  state.houses = loaded.houses;
+  setDatasetLabel(dataset);
+  const roomInput = document.getElementById("cloudRoom");
+  if (roomInput) roomInput.value = dataset;
+  refreshHouses();
+  hideDatasetGate();
+  const saved = loadCloudSettings();
+  await connectCloud(saved?.config || DEFAULT_FIREBASE_CONFIG, dataset);
 }
 
 function houseRecord(id) {
@@ -386,10 +458,8 @@ async function disconnectCloud() {
 async function connectFromForm() {
   const note = document.getElementById("cloudNote");
   try {
-    const config = parseFirebaseConfig(document.getElementById("cloudConfig").value);
-    const room = document.getElementById("cloudRoom").value.trim() || NEIGHBORHOOD.id;
     note.textContent = "Connecting…";
-    await connectCloud(config, room);
+    await openDataset(document.getElementById("cloudRoom").value);
   } catch (err) {
     setCloudUi("error", err.message || String(err));
   }
@@ -494,6 +564,10 @@ function setupUi() {
     closeSheet();
     toggleDrawer("menuPanel", true);
   });
+  document.getElementById("switchDatasetBtn").addEventListener("click", () => {
+    toggleDrawer("menuPanel", false);
+    showDatasetGate();
+  });
   document.getElementById("shareBtn").addEventListener("click", copyShareLink);
   document.getElementById("exportBtn").addEventListener("click", exportProgress);
   document.getElementById("resetBtn").addEventListener("click", resetHouses);
@@ -510,13 +584,23 @@ function setupUi() {
   });
   document.getElementById("cloudConnectBtn").addEventListener("click", connectFromForm);
   document.getElementById("cloudDisconnectBtn").addEventListener("click", async () => {
-    saveCloudSettings({ disabled: true });
+    saveCloudSettings({ disabled: true, room: getSavedDataset() });
     await disconnectCloud();
   });
   const saved = loadCloudSettings();
   const config = saved?.config || DEFAULT_FIREBASE_CONFIG;
   document.getElementById("cloudConfig").value = JSON.stringify(config, null, 2);
-  document.getElementById("cloudRoom").value = saved?.room || NEIGHBORHOOD.id;
+  document.getElementById("cloudRoom").value = getSavedDataset();
+  document.getElementById("datasetForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const error = document.getElementById("datasetError");
+    error.textContent = "";
+    try {
+      await openDataset(document.getElementById("datasetInput").value);
+    } catch (err) {
+      error.textContent = err.message || String(err);
+    }
+  });
 }
 
 function toggleLocate() {
@@ -617,7 +701,9 @@ async function copyShareLink() {
   const url = new URL(window.location.href);
   url.search = "";
   url.hash = "";
-  url.searchParams.set("s", encodeShare(sharePayload()));
+  const dataset = getSavedDataset();
+  if (dataset) url.searchParams.set("set", dataset);
+  else url.searchParams.set("s", encodeShare(sharePayload()));
   const link = url.toString();
   try {
     await navigator.clipboard.writeText(link);
@@ -657,6 +743,11 @@ function resetHouses() {
   }
 }
 
+function datasetFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  return sanitizeDataset(params.get("set") || params.get("dataset") || "");
+}
+
 async function start() {
   applyShareFromUrl();
   setupUi();
@@ -666,12 +757,14 @@ async function start() {
   for (const feature of parcels) parcelById.set(feature.properties.id, feature);
   setupMap(data);
   renderStats();
-  const saved = loadCloudSettings();
-  if (!saved?.disabled) {
-    const config = saved?.config || DEFAULT_FIREBASE_CONFIG;
-    connectCloud(config, saved?.room || NEIGHBORHOOD.id).catch((err) => {
+  const dataset = datasetFromUrl() || getSavedDataset();
+  if (dataset) {
+    openDataset(dataset).catch((err) => {
       setCloudUi("error", err.message || String(err));
+      showDatasetGate();
     });
+  } else {
+    showDatasetGate();
   }
 }
 

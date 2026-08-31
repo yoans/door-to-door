@@ -69,7 +69,7 @@
           <span class="pop">🍿</span>
           <div>
             <h1>Wagon Popcorn</h1>
-            <p>Timberview &amp; Blooming Heights</p>
+            <p id="datasetLabel">Timberview &amp; Blooming Heights</p>
           </div>
         </div>
         <div class="top-actions">
@@ -158,7 +158,7 @@
       <div class="drawer-head">
         <div>
           <h2>Route</h2>
-          <p id="menuBlurb">Saved on this phone. Turn on cloud to share live with the wagon.</p>
+          <p id="menuBlurb">Saved on this phone and in the cloud for this data set.</p>
         </div>
         <button id="menuClose" class="icon-btn" type="button" aria-label="Close menu">
           <svg class="ico"><use href="#i-close"/></svg>
@@ -183,8 +183,8 @@
         <button id="copyRulesBtn" type="button">Copy database rules</button>
         <label class="note-label" for="cloudConfig">Paste firebaseConfig</label>
         <textarea id="cloudConfig" rows="7" placeholder='{ apiKey: "...", databaseURL: "...", projectId: "..." }'></textarea>
-        <label class="note-label" for="cloudRoom">Room name</label>
-        <input id="cloudRoom" type="text" maxlength="40" value="timberview-blooming-heights" />
+        <label class="note-label" for="cloudRoom">Data set name</label>
+        <input id="cloudRoom" type="text" maxlength="40" placeholder="SellingSept2026" />
         <div class="menu-actions cloud-actions">
           <button id="cloudConnectBtn" type="button">Connect cloud</button>
           <button id="cloudDisconnectBtn" class="secondary" type="button">Disconnect</button>
@@ -192,13 +192,34 @@
         <p id="cloudNote" class="hint"></p>
       </div>
       <div class="menu-actions">
+        <button id="switchDatasetBtn" type="button">Switch data set</button>
         <button id="shareBtn" type="button">Copy share link</button>
         <button id="exportBtn" type="button">Download backup</button>
         <button id="resetBtn" class="danger" type="button">Reset all houses</button>
       </div>
     </aside>
 
-    <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app-compat.js"></script>
+    <div id="datasetGate" class="gate hidden" aria-hidden="true">
+      <form id="datasetForm" class="gate-card">
+        <span class="pop">🍿</span>
+        <h2>Data set name</h2>
+        <p>
+          Same name on every phone shares the same map. Use something like
+          <b>SellingSept2026</b> or <b>cy2026</b>. This is only to avoid mixing routes — not a real password.
+        </p>
+        <input
+          id="datasetInput"
+          type="text"
+          maxlength="40"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+          placeholder="SellingSept2026"
+        />
+        <p id="datasetError" class="hint"></p>
+        <button type="submit">Open map</button>
+      </form>
+    </div>
     <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-database-compat.js"></script>
     <script
       src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"

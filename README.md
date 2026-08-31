@@ -13,7 +13,7 @@ Phone-friendly map for door-to-door popcorn in **Timberview & Blooming Heights**
 - **Not home** — come back
 - Notes stick to the house
 - ◎ follows your GPS
-- Cloud icon → Firebase **Spark (no-cost)** live sync. Do not add billing or upgrade to Blaze. If a free cap is hit, sync stops; this phone still works.
+- Cloud icon → live sync on Firebase Spark. First visit asks for a **data set name** (like `SellingSept2026`). Same name = same map. Not a real password.
 - ⋯ **Copy share link** is a one-time snapshot if you are not using cloud
 
 ## Run it locally
