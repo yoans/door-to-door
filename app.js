@@ -354,7 +354,7 @@ function syncHouseToCloud(id) {
   write
     .then(() => {
       if (cloud.housesRef && cloud.status === "error") {
-        setCloudUi("live", `Sharing room “${cloud.room}” on the free Spark plan. If a cap is hit, sync stops.`);
+        setCloudUi("live", `Live in Realtime Database at wagon/${cloud.room}/houses — not Firestore.`);
       }
     })
     .catch((err) => {
@@ -443,7 +443,7 @@ async function connectCloud(config, room) {
     (err) => setCloudUi("error", quotaMessage(err))
   );
   saveCloudSettings({ config, room: safeRoom });
-  setCloudUi("live", `Sharing room “${safeRoom}” on the free Spark plan. If a cap is hit, sync stops.`);
+  setCloudUi("live", `Live in Realtime Database at wagon/${safeRoom}/houses — not Firestore.`);
 }
 
 async function disconnectCloud() {
