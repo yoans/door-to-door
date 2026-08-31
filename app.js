@@ -325,7 +325,10 @@ function setCloudUi(status, note) {
   const btn = document.getElementById("cloudBtn");
   if (stateEl) stateEl.textContent = label;
   if (noteEl && note !== undefined) noteEl.textContent = note;
-  if (btn) btn.classList.toggle("live", status === "live");
+  if (btn) {
+    btn.classList.toggle("live", status === "live");
+    btn.classList.toggle("error", status === "error");
+  }
 }
 
 function withinWriteBudget() {

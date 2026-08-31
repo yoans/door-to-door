@@ -518,6 +518,10 @@ input[type="text"] {
   outline: 2px solid var(--green);
 }
 
+.icon-btn.error {
+  outline: 2px solid var(--red, #e85d4c);
+}
+
 .menu-actions button {
   background: var(--amber);
   color: #1a1410;
