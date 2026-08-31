@@ -50,6 +50,9 @@
         <circle cx="12" cy="12" r="1.6" fill="currentColor"/>
         <circle cx="12" cy="18" r="1.6" fill="currentColor"/>
       </symbol>
+      <symbol id="i-cloud" viewBox="0 0 24 24">
+        <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M7.5 18h10.2A3.8 3.8 0 0 0 21 14.6a3.7 3.7 0 0 0-3.4-3.7A5.2 5.2 0 0 0 7.8 9.2 4 4 0 0 0 4 13.1 3.4 3.4 0 0 0 7.5 18z"/>
+      </symbol>
       <symbol id="i-close" viewBox="0 0 24 24">
         <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/>
       </symbol>
@@ -72,6 +75,9 @@
         <div class="top-actions">
           <button id="locateBtn" class="icon-btn" type="button" aria-label="My location">
             <svg class="ico"><use href="#i-locate"/></svg>
+          </button>
+          <button id="cloudBtn" class="icon-btn" type="button" aria-label="Cloud sync" title="Cloud sync">
+            <svg class="ico"><use href="#i-cloud"/></svg>
           </button>
           <button id="menuBtn" class="icon-btn" type="button" aria-label="More">
             <svg class="ico"><use href="#i-menu"/></svg>
@@ -152,11 +158,38 @@
       <div class="drawer-head">
         <div>
           <h2>Route</h2>
-          <p>Saved in this browser. Copy a link to hand off to another phone.</p>
+          <p id="menuBlurb">Saved on this phone. Turn on cloud to share live with the wagon.</p>
         </div>
         <button id="menuClose" class="icon-btn" type="button" aria-label="Close menu">
           <svg class="ico"><use href="#i-close"/></svg>
         </button>
+      </div>
+      <div class="cloud-box">
+        <div class="cloud-head">
+          <svg class="ico"><use href="#i-cloud"/></svg>
+          <strong id="cloudState">Cloud: off</strong>
+        </div>
+        <p class="warn">
+          Use Firebase <b>Spark (no-cost)</b> only. Do not add a billing account and do not upgrade to Blaze.
+          If you ever hit a limit, sync just stops — it will not charge you.
+        </p>
+        <ol class="setup-steps">
+          <li>Open <a href="https://console.firebase.google.com/" target="_blank" rel="noopener">console.firebase.google.com</a></li>
+          <li>Create a project. Skip Google Analytics. Stay on Spark / no-cost. If it asks for a credit card or Blaze, cancel.</li>
+          <li>Build → Realtime Database → Create database → <b>Start in test mode</b></li>
+          <li>Rules tab → paste the rules (button below) → Publish</li>
+          <li>Project settings (gear) → Your apps → Web → copy <code>firebaseConfig</code></li>
+        </ol>
+        <button id="copyRulesBtn" type="button">Copy database rules</button>
+        <label class="note-label" for="cloudConfig">Paste firebaseConfig</label>
+        <textarea id="cloudConfig" rows="7" placeholder='{ apiKey: "...", databaseURL: "...", projectId: "..." }'></textarea>
+        <label class="note-label" for="cloudRoom">Room name</label>
+        <input id="cloudRoom" type="text" maxlength="40" value="timberview-blooming-heights" />
+        <div class="menu-actions cloud-actions">
+          <button id="cloudConnectBtn" type="button">Connect cloud</button>
+          <button id="cloudDisconnectBtn" class="secondary" type="button">Disconnect</button>
+        </div>
+        <p id="cloudNote" class="hint"></p>
       </div>
       <div class="menu-actions">
         <button id="shareBtn" type="button">Copy share link</button>
@@ -165,6 +198,8 @@
       </div>
     </aside>
 
+    <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-database-compat.js"></script>
     <script
       src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="

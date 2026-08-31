@@ -17,6 +17,24 @@ const FILL = {
   not_home: { color: "#5eb3e8", weight: 2, fillColor: "#5eb3e8", fillOpacity: 0.45 },
 };
 
+const CLOUD_KEY = "wagon-popcorn-cloud";
+const DATABASE_RULES = `{
+  "rules": {
+    "wagon": {
+      "$room": {
+        ".read": true,
+        "houses": {
+          ".write": true,
+          ".validate": "!newData.exists() || newData.numChildren() <= 400",
+          "$pin": {
+            ".validate": "!newData.exists() || (newData.hasChildren(['status', 'updatedAt']) && newData.child('status').isString() && newData.child('status').val().matches(/^(unvisited|answered|bought|no|not_home)$/) && newData.child('updatedAt').isNumber() && (!newData.hasChild('note') || (newData.child('note').isString() && newData.child('note').val().length <= 240)))"
+          }
+        }
+      }
+    }
+  }
+}`;
+
 const state = loadState();
 const layersById = new Map();
 const parcelById = new Map();
@@ -27,6 +45,8 @@ let map;
 let locateMarker;
 let locateWatch = null;
 const houseLabels = [];
+let cloud = { status: "off", room: NEIGHBORHOOD.id, housesRef: null, applying: false };
+let writeTimes = [];
 
 function loadState() {
   try {
@@ -70,6 +90,7 @@ function setHouse(id, patch) {
   saveState();
   paintHouse(id);
   renderStats();
+  syncHouseToCloud(id);
 }
 
 function paintHouse(id) {
@@ -176,6 +197,196 @@ function toggleDrawer(id, open) {
   document.getElementById("sheetBackdrop").classList.toggle("hidden", !open && !activeId);
 }
 
+function loadCloudSettings() {
+  try {
+    return JSON.parse(localStorage.getItem(CLOUD_KEY) || "null");
+  } catch {
+    return null;
+  }
+}
+
+function saveCloudSettings(settings) {
+  if (settings) localStorage.setItem(CLOUD_KEY, JSON.stringify(settings));
+  else localStorage.removeItem(CLOUD_KEY);
+}
+
+function parseFirebaseConfig(text) {
+  const raw = text.trim();
+  try {
+    return JSON.parse(raw);
+  } catch {
+    /* firebase console paste is a JS object, not JSON */
+  }
+  const grab = (key) => {
+    const match = raw.match(new RegExp(`${key}\\s*:\\s*["']([^"']+)["']`));
+    return match ? match[1] : "";
+  };
+  const config = {
+    apiKey: grab("apiKey"),
+    authDomain: grab("authDomain"),
+    databaseURL: grab("databaseURL"),
+    projectId: grab("projectId"),
+    storageBucket: grab("storageBucket"),
+    messagingSenderId: grab("messagingSenderId"),
+    appId: grab("appId"),
+  };
+  if (!config.apiKey || !config.projectId || !config.databaseURL) {
+    throw new Error("Need apiKey, projectId, and databaseURL from firebaseConfig.");
+  }
+  return config;
+}
+
+function setCloudUi(status, note) {
+  cloud.status = status;
+  const label =
+    status === "live" ? "Cloud: live" : status === "error" ? "Cloud: paused" : "Cloud: off";
+  const stateEl = document.getElementById("cloudState");
+  const noteEl = document.getElementById("cloudNote");
+  const btn = document.getElementById("cloudBtn");
+  if (stateEl) stateEl.textContent = label;
+  if (noteEl && note !== undefined) noteEl.textContent = note;
+  if (btn) btn.classList.toggle("live", status === "live");
+}
+
+function withinWriteBudget() {
+  const now = Date.now();
+  writeTimes = writeTimes.filter((time) => now - time < 60000);
+  if (writeTimes.length >= 40) return false;
+  writeTimes.push(now);
+  return true;
+}
+
+function syncHouseToCloud(id) {
+  if (cloud.status !== "live" || !cloud.housesRef || cloud.applying) return;
+  if (!withinWriteBudget()) {
+    setCloudUi("error", "Write cap reached for this minute. Sync will try again as you keep tapping.");
+    return;
+  }
+  const rec = state.houses[id];
+  const ref = cloud.housesRef.child(id);
+  const write = rec
+    ? ref.set({
+        status: rec.status,
+        note: (rec.note || "").slice(0, 240),
+        updatedAt: rec.updatedAt || Date.now(),
+      })
+    : ref.remove();
+  write
+    .then(() => {
+      if (cloud.housesRef && cloud.status === "error") {
+        setCloudUi("live", `Sharing room “${cloud.room}” on the free Spark plan. If a cap is hit, sync stops.`);
+      }
+    })
+    .catch((err) => {
+      setCloudUi("error", quotaMessage(err));
+    });
+}
+
+function quotaMessage(err) {
+  const code = String(err && (err.code || err.message) || "");
+  if (/quota|limit|exceeded/i.test(code)) {
+    return "Firebase free cap hit. Sync paused so you are not billed. Local map still works.";
+  }
+  return err.message || "Cloud write failed. Local map still works.";
+}
+
+function applyRemoteHouses(remote, prune) {
+  cloud.applying = true;
+  const incoming = remote || {};
+  let changed = false;
+  for (const [id, rec] of Object.entries(incoming)) {
+    if (!rec || !rec.status) continue;
+    const current = state.houses[id];
+    if (current && (current.updatedAt || 0) > (rec.updatedAt || 0)) continue;
+    state.houses[id] = {
+      status: rec.status,
+      note: rec.note || "",
+      updatedAt: rec.updatedAt || 0,
+    };
+    changed = true;
+  }
+  if (prune) {
+    for (const id of Object.keys(state.houses)) {
+      if (incoming[id]) continue;
+      if ((state.houses[id].updatedAt || 0) > Date.now() - 2000) continue;
+      delete state.houses[id];
+      changed = true;
+    }
+  }
+  if (changed) {
+    saveState();
+    for (const id of layersById.keys()) paintHouse(id);
+    renderStats();
+    updateHouseLabels();
+  }
+  cloud.applying = false;
+}
+
+function pushLocalNewer(remote) {
+  const incoming = remote || {};
+  const updates = {};
+  for (const [id, rec] of Object.entries(state.houses)) {
+    const other = incoming[id];
+    if (!other || (rec.updatedAt || 0) > (other.updatedAt || 0)) {
+      updates[id] = {
+        status: rec.status,
+        note: (rec.note || "").slice(0, 240),
+        updatedAt: rec.updatedAt || Date.now(),
+      };
+    }
+  }
+  if (Object.keys(updates).length && cloud.housesRef) {
+    cloud.housesRef.update(updates).catch((err) => setCloudUi("error", quotaMessage(err)));
+  }
+}
+
+async function connectCloud(config, room) {
+  if (typeof firebase === "undefined") {
+    throw new Error("Firebase failed to load. Check the network and try again.");
+  }
+  if (firebase.apps.length) {
+    await firebase.app().delete();
+  }
+  firebase.initializeApp(config);
+  const safeRoom = (room || NEIGHBORHOOD.id).replace(/[^\w-]/g, "").slice(0, 40) || NEIGHBORHOOD.id;
+  cloud.room = safeRoom;
+  cloud.housesRef = firebase.database().ref(`wagon/${safeRoom}/houses`);
+  const snap = await cloud.housesRef.get();
+  const remote = snap.val() || {};
+  applyRemoteHouses(remote, false);
+  cloud.status = "live";
+  pushLocalNewer(remote);
+  cloud.housesRef.off();
+  cloud.housesRef.on(
+    "value",
+    (next) => applyRemoteHouses(next.val() || {}, true),
+    (err) => setCloudUi("error", quotaMessage(err))
+  );
+  saveCloudSettings({ config, room: safeRoom });
+  setCloudUi("live", `Sharing room “${safeRoom}” on the free Spark plan. If a cap is hit, sync stops.`);
+}
+
+async function disconnectCloud() {
+  if (cloud.housesRef) cloud.housesRef.off();
+  cloud.housesRef = null;
+  if (typeof firebase !== "undefined" && firebase.apps.length) {
+    await firebase.app().delete();
+  }
+  setCloudUi("off", "This phone is local-only again.");
+}
+
+async function connectFromForm() {
+  const note = document.getElementById("cloudNote");
+  try {
+    const config = parseFirebaseConfig(document.getElementById("cloudConfig").value);
+    const room = document.getElementById("cloudRoom").value.trim() || NEIGHBORHOOD.id;
+    note.textContent = "Connecting…";
+    await connectCloud(config, room);
+  } catch (err) {
+    setCloudUi("error", err.message || String(err));
+  }
+}
+
 function setupMap(data) {
   map = L.map("map", {
     zoomControl: false,
@@ -271,9 +482,34 @@ function setupUi() {
   });
 
   document.getElementById("locateBtn").addEventListener("click", toggleLocate);
+  document.getElementById("cloudBtn").addEventListener("click", () => {
+    closeSheet();
+    toggleDrawer("menuPanel", true);
+  });
   document.getElementById("shareBtn").addEventListener("click", copyShareLink);
   document.getElementById("exportBtn").addEventListener("click", exportProgress);
   document.getElementById("resetBtn").addEventListener("click", resetHouses);
+  document.getElementById("copyRulesBtn").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(DATABASE_RULES);
+      document.getElementById("copyRulesBtn").textContent = "Rules copied";
+      setTimeout(() => {
+        document.getElementById("copyRulesBtn").textContent = "Copy database rules";
+      }, 1600);
+    } catch {
+      prompt("Copy these rules into Firebase → Realtime Database → Rules", DATABASE_RULES);
+    }
+  });
+  document.getElementById("cloudConnectBtn").addEventListener("click", connectFromForm);
+  document.getElementById("cloudDisconnectBtn").addEventListener("click", async () => {
+    saveCloudSettings(null);
+    await disconnectCloud();
+  });
+  const saved = loadCloudSettings();
+  if (saved?.config) {
+    document.getElementById("cloudConfig").value = JSON.stringify(saved.config, null, 2);
+    document.getElementById("cloudRoom").value = saved.room || NEIGHBORHOOD.id;
+  }
 }
 
 function toggleLocate() {
@@ -399,12 +635,19 @@ function exportProgress() {
 
 function resetHouses() {
   if (!confirm("Clear every house status and note on this phone?")) return;
+  const clearCloud =
+    cloud.status === "live" &&
+    confirm("Also clear the shared cloud route for every phone?");
   state.houses = {};
   saveState();
   for (const id of layersById.keys()) paintHouse(id);
   renderStats();
+  updateHouseLabels();
   closeSheet();
   toggleDrawer("menuPanel", false);
+  if (clearCloud && cloud.housesRef) {
+    cloud.housesRef.remove().catch((err) => setCloudUi("error", quotaMessage(err)));
+  }
 }
 
 async function start() {
@@ -416,6 +659,12 @@ async function start() {
   for (const feature of parcels) parcelById.set(feature.properties.id, feature);
   setupMap(data);
   renderStats();
+  const saved = loadCloudSettings();
+  if (saved?.config) {
+    connectCloud(saved.config, saved.room).catch((err) => {
+      setCloudUi("error", err.message || String(err));
+    });
+  }
 }
 
 start().catch((err) => {

@@ -13,8 +13,8 @@ Phone-friendly map for door-to-door popcorn in **Timberview & Blooming Heights**
 - **Not home** — come back
 - Notes stick to the house
 - ◎ follows your GPS
-- Filters: still out, come back, bought, no
-- ⋯ **Copy share link** texts the current map to another phone. That phone opens the link and picks up the colors. It is a snapshot, not live two-way sync.
+- Cloud icon → Firebase **Spark (no-cost)** live sync. Do not add billing or upgrade to Blaze. If a free cap is hit, sync stops; this phone still works.
+- ⋯ **Copy share link** is a one-time snapshot if you are not using cloud
 
 ## Run it locally
 
